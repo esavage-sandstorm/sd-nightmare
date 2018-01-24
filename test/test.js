@@ -3,6 +3,11 @@
 const Nightmare = require('nightmare');
 const expect = require('chai').expect;
 
+// Environment Variables
+const domain = '';
+const adminUser = '';
+const adminPassword = '';
+
 describe('Drupal', function () {
   // Recommended: 5s locally, 10s to remote server, 30s from airplane ¯\_(ツ)_/¯
   this.timeout('30s');
@@ -10,7 +15,7 @@ describe('Drupal', function () {
   let nightmare = null;
   beforeEach(() => {
     // show true lets you see wth is actually happening :)
-    nightmare = new Nightmare({ show: false })
+    nightmare = new Nightmare({ show: true })
   });
 
   // describe('given valid credentials', () => {
@@ -37,9 +42,9 @@ describe('Drupal', function () {
   describe('given basic content', () => {
     it('should post it', done => {
       nightmare
-        .goto('http://ensono.local/user')
-        .insert('#edit-name', 'stormtrooper')
-        .insert('#edit-pass', '')
+        .goto(domain+'/user')
+        .insert('#edit-name', adminUser)
+        .insert('#edit-pass', adminPassword)
         .click('#edit-submit')
         .wait('#admin-menu-menu')
         .click('a[href="/admin/content"]')
