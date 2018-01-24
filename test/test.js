@@ -4,9 +4,22 @@ const Nightmare = require('nightmare');
 const expect = require('chai').expect;
 
 // Environment Variables
-const domain = '';
-const adminUser = '';
-const adminPassword = '';
+const domain = 'http://ensono.local';
+const adminUser = 'stormtrooper';
+const adminPassword = 'firstStorm#99';
+
+// Extension method allows us to define custom functions in a way that nightmare.action() doesn't seem to allow
+class ssNightmare extends Nightmare {
+
+  drupalLogin(url, user, pass) {
+    return this //this = nightmare
+    .goto(url+'/user')
+    .insert('#edit-name', adminUser)
+    .insert('#edit-pass', adminPassword)
+    .click('#edit-submit')
+  }
+}
+
 
 describe('Drupal', function () {
   // Recommended: 5s locally, 10s to remote server, 30s from airplane ¯\_(ツ)_/¯
@@ -15,30 +28,31 @@ describe('Drupal', function () {
   let nightmare = null;
   beforeEach(() => {
     // show true lets you see wth is actually happening :)
-    nightmare = new Nightmare({ show: true })
+    nightmare = new ssNightmare({ show: true })
   });
 
-  // describe('given valid credentials', () => {
-  //   it('should log in', done => {
-  //     nightmare
-  //     .goto('http://ensono.local/user')
-  //     .insert('#edit-name', 'stormtrooper')
-  //     .insert('#edit-pass', '')
-  //     .click('#edit-submit')
-  //     .wait('#admin-menu-menu')
-  //     .click('href=/admin/content')
-  //     .evaluate(() =>
-  //       document.querySelector('.page-title').innerText
-  //     )
-  //     .end()
-  //     .then((heading) => {
-  //       expect(heading).to.equal('stormtrooper');
-  //       done();
-  //     })
-  //     .catch(done)
-  //   });
-  // });
+  //test Action
+  describe('Test Login', () => {
+    it('should login to the Drupal Admin', done => {
+      nightmare
+        .drupalLogin(domain, adminUser, adminPassword)
+        //evaluate success
+        .wait('.page-title')
+        .wait(1000)
+        .evaluate(() =>
+          document.querySelector('.page-title').innerText
+        )
+        .end()
+        .then((title) => {
+          expect(title).to.equal(adminUser);
+          done();
+        })
+        .catch(done)
+    });
+  }); // End Test Action
 
+/*
+  //Post Basic Content
   describe('given basic content', () => {
     it('should post it', done => {
       nightmare
@@ -67,5 +81,7 @@ describe('Drupal', function () {
         .catch(done)
 
     });
-  });
-});
+  }); // End Post Basic Content
+*/
+
+}); // End Drupal
