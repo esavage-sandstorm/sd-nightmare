@@ -1,7 +1,73 @@
 'use strict';
 
 const Nightmare = require('nightmare');
+const expect = require('chai').expect;
+// Get form fields
+Nightmare.action('formFields', function(formSelector, done) {
+  //`this` is the Nightmare instance
+  this.evaluate_now((formSelector) => {
+    //fill in inputs
+    var inputs = Array.from(document.querySelectorAll(formSelector+' input')).map((element) => element);
+    for (var i=0;i<inputs.length;i++) {
+      switch(inputs[i].type){
+        case 'email':
+          inputs[i].value='test@nightmarejs.com';
+          break;
+        case 'submit':
+          break;
+        case 'number':
+          inputs[i].value = 42;
+          break;
+        default: // text
+          if (inputs[i].name.toLowerCase().indexOf('name') > -1) {
 
+            if (inputs[i].name.toLowerCase().indexOf('first') > -1) {
+              var firstnames=['Mary', 'John', 'Sally', 'Bob', 'Penelope', 'Beauregard'];
+              var x = Math.floor(Math.random() * firstnames.length);
+              var name = firstnames[x];
+              inputs[i].value = name;
+            }
+
+            else if (inputs[i].name.toLowerCase().indexOf('last') > -1) {
+              var lastnames=['Smith', 'McGillicudy', 'Kissinger', 'Xi', 'Torrez', 'Greene'];
+              var x = Math.floor(Math.random() * lastnames.length);
+              var name = lastnames[x];
+              inputs[i].value = name;
+            }
+
+            else if (inputs[i].name.toLowerCase().indexOf('company') > -1) {
+              inputs[i].value = 'Sandstorm Design';
+            }
+
+            else {
+              inputs[i].value = 'nobody';
+            }
+
+          } else {
+            inputs[i].value='lorem ipsum';
+          }
+          break;
+      }
+    }
+    //fill in selects
+    var selects = Array.from(document.querySelectorAll(formSelector+' select')).map((element) => element);
+
+    for (var i=0;i<selects.length;i++) {
+      var b = Math.floor(Math.random() * selects[i].options.length);
+      selects[i].options[b].setAttribute('selected', 'selected');
+    }
+    //fill in textareas
+    var textareas = Array.from(document.querySelectorAll(formSelector+' textarea')).map((element) => element);
+
+    for (var i=0;i<textareas.length;i++) {
+      textareas[i].value='This is Nightmare';
+    }
+      return;
+  //pass done as the first argument, other arguments following
+  }, done, formSelector);
+});
+// end
+//
 // Extension method allows us to define custom functions in a way that nightmare.action() doesn't seem to allow
 class ssNightmare extends Nightmare {
 
@@ -27,13 +93,28 @@ class ssNightmare extends Nightmare {
       .click('#edit-submit')
       .wait('.messages.status')
   }
+  testForm(inputs, selects) {
+    //Fill in all inputs
+    for (var field in selects) {
+      var value = inputs[field];
+      this.insert('#'+field, value)
+      .wait(500);
+    }
+    for (var field in selects) {
+      var value = selects[field];
+      this.select('#'+field, value)
+      .wait(500);
+    }
+    return this;
+  }
+
 }
-const expect = require('chai').expect;
+
 
 // Environment Variables
-const domain = 'http://ensono.local';
-const adminUser = 'stormtrooper';
-const adminPassword = 'firstStorm#99';
+const domain = '';
+const adminUser = '';
+const adminPassword = '';
 
 
 
@@ -47,29 +128,35 @@ describe('Drupal', function () {
     nightmare = new ssNightmare({ show: true })
   });
 
-/*
 
   //test Action
-  describe('Test Login', () => {
-    it('should login to the Drupal Admin', done => {
+  describe('Test Form Submit', () => {
+    it('should fill in the form and submit', done => {
+      const inputs = {};
+
+      //test the form
       nightmare
-        .drupalLogin(domain, adminUser, adminPassword)
+        .goto(domain+'/request-info')
+        .formFields('.webform-client-form')
+        .wait(2000)
+        .click('input[type="submit"]')
+        //.fillForm('.webform-client-form')
         //evaluate success
-        .wait('.page-title')
-        .wait(1000)
+        .wait(2000)
+        .wait('.webform-confirmation')
         .evaluate(() =>
-          document.querySelector('.page-title').innerText
+          document.querySelector('.webform-confirmation').innerText
         )
         .end()
-        .then((title) => {
-          expect(title).to.equal(adminUser);
+        .then((confirmation) => {
+          expect(confirmation).to.equal('Thank you, your submission has been received and someone from our team will contact you soon.');
           done();
         })
         .catch(done)
     });
   }); // End Test Action
 
-*/
+/*
   //Post Basic Content
   describe('given basic content', () => {
     it('should create a page', done => {
@@ -93,4 +180,5 @@ describe('Drupal', function () {
 
     });
   }); // End Post Basic Content
+*/
 }); // End Drupal
