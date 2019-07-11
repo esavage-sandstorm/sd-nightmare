@@ -1,10 +1,10 @@
 {
-  "name": "drupalnightmare",
+  "name": "nightmare-drupal-maintenance",
   "version": "1.0.0",
-  "description": "focus #email enter username",
+  "description": "Make robots do the boring work",
   "main": "index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "mocha ./maintenance.js"
   },
   "author": "",
   "license": "ISC",
@@ -12,5 +12,9 @@
     "chai": "^4.1.2",
     "mocha": "^4.0.1",
     "nightmare": "^2.10.0"
+  },
+  "dependencies": {
+    "js-yaml": "^3.13.1",
+    "mocha-generators": "^2.0.0"
   }
 }

@@ -1,2 +1,5 @@
 node_modules
 .DS_Store
+modules/sd-d7-nightmare/*
+env/*
+!env/example.env
