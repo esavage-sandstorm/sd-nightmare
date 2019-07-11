@@ -1,0 +1,3 @@
+[submodule "modules/sd-d7-nightmare"]
+	path = modules/sd-d7-nightmare
+	url = git@github.com:esavage-sandstorm/sd-d7-nightmare.git
