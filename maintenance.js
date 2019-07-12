@@ -169,7 +169,7 @@ const addToReport = function(text){
     this.timeout('240s');
     nightmare.use(D7.Login());
   });
-
+  /*
   describe('Get the Status Report', function(){
     this.timeout('20s');
     addToReport('<h2>Status</h2>');
@@ -371,7 +371,15 @@ const addToReport = function(text){
       expect(logs.length).to.equal(0);
     })
   });
-
+  */
+  describe('Check for updates', function(){
+    this.timeout('30s');
+    let updates = null;
+    it('Get available updates', function*(){
+      updates = yield nightmare.use(D7.checkForUpdates());
+      console.log(updates);
+    })
+  });
 
 const end = function() {
   let bar = '#';
