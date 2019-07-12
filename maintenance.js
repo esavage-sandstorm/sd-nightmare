@@ -164,7 +164,7 @@ const addToReport = function(text){
 }
 
 // Queue tests here, passing along the same nightmare instance
-  /*
+
   describe('Log in to Drupal', function() {
     this.timeout('240s');
     nightmare.use(D7.Login());
@@ -259,22 +259,21 @@ const addToReport = function(text){
       expect(phpModules).to.contain('opcache');
     });
   });
-  */
 
-  const pageSpeedTable = new table('google-page-speed');
-  pageSpeedTable.addHeader('');
-  pageSpeedTable.addHeader('Mobile');
-  pageSpeedTable.addHeader('Desktop');
-  const systemTable = new table('performance');
-  systemTable.addHeader('');
-  systemTable.addHeader('Free');
-  systemTable.addHeader('Used');
-  systemTable.addHeader('Total');
 
   describe('Performance/Security', function(){
     this.timeout('30s');
     let pageSpeedInsights = null;
-/*
+    const pageSpeedTable = new table('google-page-speed');
+    pageSpeedTable.addHeader('');
+    pageSpeedTable.addHeader('Mobile');
+    pageSpeedTable.addHeader('Desktop');
+    const systemTable = new table('performance');
+    systemTable.addHeader('');
+    systemTable.addHeader('Free');
+    systemTable.addHeader('Used');
+    systemTable.addHeader('Total');
+
     it('Check Google PageSpeed Insights', function*(){
       const testUrl = 'https://sandstormdesign.com';
       pageSpeedInsights = yield nightmare
@@ -333,13 +332,13 @@ const addToReport = function(text){
       addToReport(systemTable.html());
       expect(disk).to.be.an('object');
     });
-    */
+
 
 
     it('Check PHP version', function*() {
       addToReport('<H3>PHP</h3>');
       const data = yield sshExec('php -v');
-      const currentPHPVersion = data.match(/(?<=PHP )[0-9]+\.[0-9]*\.[0-9]*/)[0];
+      const currentPHPVersion = data.match(/(?<=PHP )[0-9]+\.[0-9]*\.[0-9]* /)[0];
       const v = currentPHPVersion.split('.')[0];
       const phpUrl = 'https://www.php.net/releases/?json&version='+v+'&max=1';
       const php = yield axiosGet(phpUrl);
@@ -349,6 +348,28 @@ const addToReport = function(text){
       phpTable.addRow(['Latest Stable Version', latestPHPversion]);
       addToReport(phpTable.html());
     });
+  });
+
+  describe('Check Drupal Logs', function(){
+    this.timeout('30s');
+    it('Check for PHP errors', function*(){
+      const logs = yield nightmare.use(D7.logs('php', 'error'));
+      const logsTable = new table('php-error-logs');
+      const hasErrors = (logs.length == 0)? 'No' : 'Yes';
+      logsTable.addRow(['PHP Errors', hasErrors]);
+      if (logs.length > 0){
+        logsTable.addRow(['<strongList</strong>']);
+        logsTable.addRow(['<strong>Type</strong>', '<strong>Date</strong>', '<strong>Message</strong>', '<strong>User</strong>']);
+        logs.forEach(log => {
+
+          logsTable.addRow([log.type, log.date, '<a href="'+log.link+'" target="_blank">'+log.text+'</a>', log.user]);
+        });
+        logsTable.addRow(['<strong>Actions taken:</strong><br/><br/>','']);
+      }
+      addToReport('<h3>Log Messages</h3>');
+      addToReport(logsTable.html());
+      expect(logs.length).to.equal(0);
+    })
   });
 
 
