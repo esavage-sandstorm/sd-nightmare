@@ -4,7 +4,8 @@
   "description": "Make robots do the boring work",
   "main": "index.js",
   "scripts": {
-    "test": "mocha ./maintenance.js"
+    "test": "mocha ./maintenance.js",
+    "automate": "mocha ./automate.js"
   },
   "author": "Eric Savage, Sandstorm Design",
   "license": "ISC",
