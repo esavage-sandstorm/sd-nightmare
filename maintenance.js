@@ -11,255 +11,45 @@ const strings = require('./modules/stringsHelper.js');
 const dates = require('./modules/dateHelper.js');
 const table = require('./modules/tableHelper.js');
 const D7module = new require('./modules/sd-d7-nightmare/index.js');
+const maintenanceModule = require('./modules/maintenance.js');
 
-const user = require("os").userInfo().username;
+
 
 // Parse arguments into a usable array;
-function message(lines, type){
-  let top ='#';
-  if (type){
-    let top = '#'+type.toUpperCase();
-  }
-  while (top.length < 80){
-    top += '#';
-  }
-  let bottom = '#';
-  while (bottom.length < 80){
-    bottom += '#';
-  }
-  console.log(top);
-  if (typeof lines == 'object'){
-    for (var i=0;i<lines.length; i++) {
-      console.log('## '+lines[i]);
-    }
-  }else {
-    console.log('## '+lines);
-  }
-  console.log(bottom);
-}
-function error(lines){
-  message(lines, 'error');
-}
-
 const args = process.argv;
 const shell = args.shift();
-const mocha = args.shift();
+const mocha = args.shift(); // get mocha from npm function calling this script
 const script = args.shift();
 const client = args[0];
-if (!client){
-  error('A valid client (i.e. Sandstorm) must be specified.');
-  process.exit(1);
-}
-
 const env = args[1];
-if (!env){
-  error('A valid environment (i.e. dev, local, live) must be specified.');
-  process.exit(2);
-}
 
-message(['Sandstorm Nightmare Maintenance', strings.capitalize(client)+': '+strings.capitalize(env)] );
+const maintenanceBot = new maintenanceModule(client, env);
+// bot contains nightmare and D7 instances, so let it handle everything
 
-function getEnvConfig(client, env){
-  let config = null;
-  let globalConfig = null
-  try {
-    config = yaml.safeLoad(fs.readFileSync('./env/'+client+'.env', 'utf8'));
-    globalConfig = config['global'];
-  } catch (e) {
-    console.error(e);
-  }
+  maintenanceBot.start();
+  maintenanceBot.reportHeader();
+  maintenanceBot.login();
+  maintenanceBot.cmsStatus();
 
-  if (!config){
-    error(client+' is not a valid client');
-    process.exit(1);
-  } else {
-    config = config[env];
+// const ssh = new SSH2Promise(sshconfig);
 
-  }
+// const sshExec = function(cmd){
+//   return ssh.exec(cmd).then((data) => {
+//     return data;
+//   });
+// }
 
-  if (!config){
-    error(env+' is not a valid environment');
-    process.exit(2);
-  }
-  if (globalConfig){
-    config = Object.assign(globalConfig, config);
-  }
-  return config;
-}
-const config = getEnvConfig(client, env);
+// const axiosGet = function(url){
+//   return axios.get(url)
+//   .then(response => {
+//     return response.data;
+//   })
+//   .catch(error => {
+//     console.log(error);
+//   });
+// }
 
-
-const sshconfig = {
-  host: config.sshHost,
-  username: user,
-  identity: config.keyFile
-}
-
-const ssh = new SSH2Promise(sshconfig);
-
-const nightmare = Nightmare({ show: true });
-
-// Start a report file
-const today = dates.getCurrent();
-const filename = strings.capitalize(client)+'_Maintenance_Report-'+today.yq+'-'+today.ymd+'.html';
-var dir = __dirname+'/reports';
-
-if (!fs.existsSync(dir)){
-    fs.mkdirSync(dir);
-}
-config.report = dir+'/'+filename;
-
-const maintenanceReportHeader = function(){
-  let header = '<head>';
-  header += '<title>'+ strings.capitalize(client)+' Maintenance Report - '+today.yq+'-'+today.ymd+'</title>';
-  header += '</head>';
-  header += '<body>';
-  header += '<header>';
-  header += '<h1> '+strings.capitalize(client)+' Maintenance Report - '+today.yq+'-'+today.ymd+'</h1>';
-  header += '<p>Site: '+config.url+'<br />';
-  header += 'Date: '+today.month+' '+today.D+', '+today.Y+' '+today.time+'<br />';
-  header += 'Prepared by: Nightmare JS</p>';
-  header += '</header>';
-  return header;
-}
-
-fs.writeFile(config.report, maintenanceReportHeader(), (err) => {
-  if (err) console.log(err);
-});
-
-const D7 = new D7module(config);
-
-const sshExec = function(cmd){
-  return ssh.exec(cmd).then((data) => {
-    return data;
-  });
-}
-
-const axiosGet = function(url){
-  return axios.get(url)
-  .then(response => {
-    return response.data;
-  })
-  .catch(error => {
-    console.log(error);
-  });
-}
-
-const addToReport = function(text){
-  const report = config.report;
-  if (!report){
-    console.log('Could not find '+report);
-    return false;
-  }
-  try {
-    if (fs.existsSync(report)) {
-      //file exists
-      fs.appendFile(report, text, function (err) {
-        if (err) throw err;
-      });
-    }
-  } catch(err) {
-    console.error(err)
-  }
-}
-
-// Queue tests here, passing along the same nightmare instance
-
-  describe('Log in to Drupal', function() {
-    this.timeout('240s');
-    nightmare.use(D7.Login());
-  });
-  /*
-  describe('Get the Status Report', function(){
-    this.timeout('20s');
-    addToReport('<h2>Status</h2>');
-    const statusTable = new table('status');
-    nightmare.use(D7.goToPage('/admin/reports/status'));
-
-    let statusReport = null;
-
-    it('Gather report', function*(){
-      statusReport = yield nightmare.use(D7.statusReport());
-      expect(statusReport).to.be.an('array');
-    });
-    const getReportItemByTitle =function(title){
-      return statusReport.filter(item => {
-        return item.title == title;
-      })[0];
-    }
-
-    it('Cron is running', function*(){
-      const cron = getReportItemByTitle('Cron maintenance tasks');
-      const status = cron.type;
-      statusTable.addRow(['Cron Running', cron.value]);
-      expect(status).to.equal('ok');
-    });
-
-    it('File system permissions are writable', function*(){
-      const status = getReportItemByTitle('File system').value;
-      statusTable.addRow(['File System Permissions', status]);
-      expect(status).to.contain('Writable');
-    });
-
-    it('Configuration file is PROTECTED', function*(){
-      const status = getReportItemByTitle('Configuration file').value;
-      statusTable.addRow(['Configuration File Protected', status.toUpperCase()]);
-      expect(status).to.equal('Protected');
-    });
-
-    it('Access to update.php is PROTECTED', function*(){
-      const status = getReportItemByTitle('Access to update.php').value;
-      statusTable.addRow(['Access to update.php', status.toUpperCase()]);
-      expect(status).to.equal('Protected');
-    });
-
-    it('Test form submissions', function*(){
-      const row = ['Forms Submissions Tested', 'TO DO'];
-      statusTable.addRow(row);
-      console.log('This must be done manually');
-      expect(row).to.be.an('array');
-    });
-
-    it('Check if DB Backup Running', function*(){
-      const row = ['DB Backup Running', 'TO DO'];
-      statusTable.addRow(row);
-      console.log('This must be done manually');
-      expect(row).to.be.an('array');
-    });
-
-    it('Update Dev Site', function*(){
-      const row = ['Dev Site Updated', 'TO DO'];
-      statusTable.addRow(row);
-      console.log('This must be done manually');
-      expect(row).to.be.an('array');
-    });
-
-    it('Google Analytics is Reporting', function*(){
-      const ga = yield nightmare
-        .goto(config.url)
-        // .wait(5000)
-        .evaluate(() => {
-          alert(window.GoogleAnalyticsObject);
-          return !!window.GoogleAnalyticsObject;
-        });
-      const status = (ga) ? 'Reporting' : 'Not Reporting';
-      const row = ['Google Analytics Reporting', status];
-      statusTable.addRow(row);
-      expect(ga).to.equal(true);
-    });
-
-    it('PHP opcache enabled on Prod', function*(){
-      const data = yield sshExec('php -m');
-      const phpModules = data.split('\n');
-      const status =  (phpModules.indexOf('opcache') > -1)? 'enabled' : 'not found';
-      const row = ['PHP opcache enabled on Prod', status];
-      statusTable.addRow(row);
-      addToReport(statusTable.html());
-      expect(phpModules).to.be.an('array');
-      expect(phpModules).to.contain('opcache');
-    });
-  });
-
+/*
 
   describe('Performance/Security', function(){
     this.timeout('30s');
@@ -372,27 +162,13 @@ const addToReport = function(text){
     })
   });
   */
-  describe('Check for updates', function(){
-    this.timeout('30s');
-    let updates = null;
-    it('Get available updates', function*(){
-      updates = yield nightmare.use(D7.checkForUpdates());
-      console.log(updates);
-    })
-  });
-
-const end = function() {
-  let bar = '#';
-  while (bar.length < 80){
-    bar += '#';
-  }
-  describe(bar, function(){
-    it('End this Nightmare', function*(){
-      opn(config.report, {app: 'firefox'});
-      yield nightmare.end();
-      // process.exit(0);
-    })
-  })
-}
-end();
-
+  // describe('Check for updates', function(){
+  //   this.timeout('30s');
+  //   let updates = null;
+  //   it('Get available updates', function*(){
+  //     updates = yield nightmare.use(D7.checkForUpdates());
+  //     console.log(updates);
+  //   })
+  // });
+maintenanceBot.exportReport();
+maintenanceBot.end();
